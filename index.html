@@ -10,72 +10,62 @@
         header { background: white; padding: 20px; text-align: center; border-bottom: 2px solid var(--main-red); position: sticky; top: 0; z-index: 100; }
         h1 { color: var(--main-red); margin: 0; font-size: 24px; letter-spacing: 2px; }
         #news-container { padding: 15px; max-width: 600px; margin: 0 auto; }
-        
-        /* 卡片设计 */
-        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #eee; animation: fadeIn 0.5s ease; }
-        .card-time { font-size: 12px; color: #999; margin-bottom: 8px; }
-        .card-content { line-height: 1.6; color: var(--text-gray); font-size: 15px; word-break: break-all; }
-        
-        /* 协同按钮 */
-        .actions { margin-top: 15px; border-top: 1px dashed #eee; padding-top: 10px; display: flex; justify-content: space-around; }
-        .btn { cursor: pointer; color: #888; font-size: 14px; display: flex; align-items: center; gap: 5px; }
-        .btn.active { color: var(--main-red); font-weight: bold; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* 加载状态 */
-        #loader { text-align: center; padding: 20px; color: var(--main-red); font-weight: bold; }
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; overflow: hidden; }
+        .card-header { padding: 10px 15px; background: #fafafa; border-bottom: 1px solid #eee; font-size: 12px; color: #888; }
+        .card-body { padding: 15px; line-height: 1.6; color: var(--text-gray); font-size: 15px; }
+        .card-body img { max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; }
+        #status { text-align: center; padding: 20px; color: var(--main-red); font-size: 14px; }
     </style>
 </head>
 <body>
-    <header>
-        <h1>瑰 夏 · GESHA</h1>
-        <p style="font-size: 11px; color: #999; margin: 5px 0 0 0;">瑰夏 团队协同情报站</p>
-    </header>
-
-    <div id="loader">正在调取全球情报信号...</div>
+    <header><h1>瑰 夏 · GESHA</h1></header>
+    <div id="status">正在搜索电波信号...</div>
     <div id="news-container"></div>
 
     <script>
-    // 你的频道列表
-    const myChannels = ['rybar_pacific', 'ejdailyru', 'riakatysha', 'moscowtimes_ru', 'rybar']; 
+        // 【第一步】在这里填入你想关注的频道名字
+        const myChannels = ['rybar_pacific', 'ejdailyru', 'riakatysha', 'moscowtimes_ru', 'rybar']; 
 
-    async function startGesha() {
-        const container = document.getElementById('news-container');
-        const loader = document.getElementById('loader');
-        
-        // 这是一个更稳定的中转代理，它能把 TG 信号翻译成 App 懂的语言
-        // 如果这个也打不开，说明你需要开启 VPN 来进行第一次加载测试
-        for (const name of myChannels) {
-            // 我们尝试使用另一个备用源
-            const rssUrl = `https://rsshub.feedly.workers.dev/telegram/channel/${name}`;
-            const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+        async function loadGesha() {
+            const container = document.getElementById('news-container');
+            const status = document.getElementById('status');
             
-            try {
-                const res = await fetch(apiUrl);
-                const data = await res.json();
-                
-                if (data.status === 'ok') {
-                    loader.style.display = 'none';
-                    data.items.forEach(item => {
-                        const card = document.createElement('div');
-                        card.className = 'card';
-                        // 提取图片（如果有的话）
-                        let content = item.description;
-                        
-                        card.innerHTML = `
-                            <div style="font-size:12px;color:#999;margin-bottom:8px;">来自: @${name}</div>
-                            <div style="line-height:1.6; font-size:14px;">${content}</div>
-                        `;
-                        container.appendChild(card);
-                    });
+            for (const channel of myChannels) {
+                // 【第二步】使用更稳定的中转源，并加入随机数防止缓存
+                const timestamp = new Date().getTime();
+                const rssUrl = `https://rsshub.m18.club/telegram/channel/${channel}`;
+                const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&t=${timestamp}`;
+
+                try {
+                    console.log(`正在抓取: ${channel}...`);
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+
+                    if (data.status === 'ok') {
+                        status.style.display = 'none';
+                        data.items.forEach(item => {
+                            const card = document.createElement('div');
+                            card.className = 'card';
+                            
+                            // 格式化发布时间
+                            const date = new Date(item.pubDate).toLocaleString();
+
+                            card.innerHTML = `
+                                <div class="card-header">来自: @${channel} | ${date}</div>
+                                <div class="card-body">${item.description}</div>
+                            `;
+                            container.appendChild(card);
+                        });
+                    }
+                } catch (error) {
+                    console.error("抓取失败:", error);
+                    status.innerText = "信号连接暂时中断，请确认VPN已开启并刷新页面";
                 }
-            } catch (e) {
-                console.log("信号接入点暂时忙碌...");
             }
         }
-    }
-    startGesha();
+
+        // 启动程序
+        loadGesha();
     </script>
 </body>
 </html>
