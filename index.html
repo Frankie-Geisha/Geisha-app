@@ -7,31 +7,89 @@
     <style>
         :root { --main-red: #D32F2F; --bg-cream: #FFFDF9; --text-gray: #444; }
         body { background-color: var(--bg-cream); margin: 0; font-family: sans-serif; }
-        header { background: white; padding: 20px; text-align: center; border-bottom: 2px solid var(--main-red); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        header { background: white; padding: 20px; text-align: center; border-bottom: 2px solid var(--main-red); position: sticky; top: 0; z-index: 100; }
         h1 { color: var(--main-red); margin: 0; font-size: 24px; letter-spacing: 2px; }
         #news-container { padding: 15px; max-width: 600px; margin: 0 auto; }
-        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #eee; }
-        .card-content { line-height: 1.6; color: var(--text-gray); font-size: 15px; }
+        
+        /* 卡片设计 */
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #eee; animation: fadeIn 0.5s ease; }
+        .card-time { font-size: 12px; color: #999; margin-bottom: 8px; }
+        .card-content { line-height: 1.6; color: var(--text-gray); font-size: 15px; word-break: break-all; }
+        
+        /* 协同按钮 */
         .actions { margin-top: 15px; border-top: 1px dashed #eee; padding-top: 10px; display: flex; justify-content: space-around; }
-        .btn { cursor: pointer; color: #888; font-size: 14px; transition: 0.3s; }
-        .btn:hover { color: var(--main-red); font-weight: bold; }
+        .btn { cursor: pointer; color: #888; font-size: 14px; display: flex; align-items: center; gap: 5px; }
+        .btn.active { color: var(--main-red); font-weight: bold; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* 加载状态 */
+        #loader { text-align: center; padding: 20px; color: var(--main-red); font-weight: bold; }
     </style>
 </head>
 <body>
     <header>
         <h1>瑰 夏 · GESHA</h1>
-        <p style="font-size: 12px; color: #999; margin-top: 5px;">专注 rybar_pacific 协同情报</p>
+        <p style="font-size: 11px; color: #999; margin: 5px 0 0 0;">RYBAR PACIFIC 团队协同情报站</p>
     </header>
 
-    <div id="news-container">
-        <div class="card">
-            <div class="card-content">正在等待数据泵连接 Telegram 频道...</div>
-            <div class="actions">
-                <span class="btn">❤ 关注</span>
-                <span class="btn">💬 协同评论</span>
-                <span class="btn">🚩 标记重点</span>
-            </div>
-        </div>
-    </div>
+    <div id="loader">正在调取全球情报信号...</div>
+    <div id="news-container"></div>
+
+    <script>
+        // 1. 设置“水源”：这是 rybar_pacific 的转换地址
+        const tgChannel = 'rybar_pacific';
+        const rssUrl = `https://rsshub.app/telegram/channel/${tgChannel}`;
+        // 使用中转 API 绕过限制
+        const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+
+        // 2. 抓取数据的函数
+        async function fetchTGData() {
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                const container = document.getElementById('news-container');
+                const loader = document.getElementById('loader');
+                
+                loader.style.display = 'none'; // 隐藏加载提示
+
+                // 3. 将取回的数据放进网页
+                data.items.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    
+                    // 格式化时间
+                    const pubDate = new Date(item.pubDate).toLocaleString();
+
+                    card.innerHTML = `
+                        <div class="card-time">${pubDate}</div>
+                        <div class="card-content">${item.description}</div>
+                        <div class="actions">
+                            <span class="btn" onclick="toggleLike(this)">❤ 点赞</span>
+                            <span class="btn" onclick="alert('评论功能对接中...')">💬 协同评论</span>
+                            <span class="btn" onclick="this.classList.toggle('active')">🚩 标记</span>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                document.getElementById('loader').innerText = '信号连接失败，请检查网络或刷新重试';
+                console.error(error);
+            }
+        }
+
+        // 4. 点赞的小互动
+        function toggleLike(el) {
+            el.classList.toggle('active');
+            if(el.classList.contains('active')) {
+                el.innerText = '❤ 已赞';
+            } else {
+                el.innerText = '❤ 点赞';
+            }
+        }
+
+        // 执行抓取
+        fetchTGData();
+    </script>
 </body>
 </html>
