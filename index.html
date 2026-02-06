@@ -10,62 +10,60 @@
         header { background: white; padding: 20px; text-align: center; border-bottom: 2px solid var(--main-red); position: sticky; top: 0; z-index: 100; }
         h1 { color: var(--main-red); margin: 0; font-size: 24px; letter-spacing: 2px; }
         #news-container { padding: 15px; max-width: 600px; margin: 0 auto; }
-        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; overflow: hidden; }
-        .card-header { padding: 10px 15px; background: #fafafa; border-bottom: 1px solid #eee; font-size: 12px; color: #888; }
-        .card-body { padding: 15px; line-height: 1.6; color: var(--text-gray); font-size: 15px; }
-        .card-body img { max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; }
-        #status { text-align: center; padding: 20px; color: var(--main-red); font-size: 14px; }
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        .card-header { font-size: 12px; color: var(--main-red); font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #f9f9f9; padding-bottom: 5px; }
+        .card-body { line-height: 1.6; color: var(--text-gray); font-size: 15px; }
+        .card-time { font-size: 11px; color: #999; margin-top: 10px; text-align: right; }
+        #status { text-align: center; padding: 20px; color: #888; font-size: 14px; }
+        .error-msg { color: #cc0000; font-size: 12px; margin-top: 5px; }
     </style>
 </head>
 <body>
     <header><h1>瑰 夏 · GESHA</h1></header>
-    <div id="status">正在搜索电波信号...</div>
+    <div id="status">正在同步 5 路情报频道...</div>
     <div id="news-container"></div>
 
     <script>
-        // 【第一步】在这里填入你想关注的频道名字
-        const myChannels = ['rybar_pacific', 'ejdailyru', 'riakatysha', 'moscowtimes_ru', 'rybar']; 
-
-        async function loadGesha() {
+        // 你的情报名单
+        const channels = ['rybar_pacific', 'ejdailyru', 'riakatysha', 'moscowtimes_ru', 'rybar'];
+        
+        // 自动轮询函数
+        async function fetchChannel(name) {
             const container = document.getElementById('news-container');
-            const status = document.getElementById('status');
-            
-            for (const channel of myChannels) {
-                // 【第二步】使用更稳定的中转源，并加入随机数防止缓存
-                const timestamp = new Date().getTime();
-                const rssUrl = `https://rsshub.m18.club/telegram/channel/${channel}`;
-                const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&t=${timestamp}`;
+            // 使用更稳健的解析服务
+            const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=https://rsshub.app/telegram/channel/${name}&api_key=your_free_key_optional`;
 
-                try {
-                    console.log(`正在抓取: ${channel}...`);
-                    const response = await fetch(apiUrl);
-                    const data = await response.json();
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
 
-                    if (data.status === 'ok') {
-                        status.style.display = 'none';
-                        data.items.forEach(item => {
-                            const card = document.createElement('div');
-                            card.className = 'card';
-                            
-                            // 格式化发布时间
-                            const date = new Date(item.pubDate).toLocaleString();
-
-                            card.innerHTML = `
-                                <div class="card-header">来自: @${channel} | ${date}</div>
-                                <div class="card-body">${item.description}</div>
-                            `;
-                            container.appendChild(card);
-                        });
-                    }
-                } catch (error) {
-                    console.error("抓取失败:", error);
-                    status.innerText = "信号连接暂时中断，请确认VPN已开启并刷新页面";
+                if (data.status === 'ok') {
+                    document.getElementById('status').style.display = 'none';
+                    data.items.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'card';
+                        card.innerHTML = `
+                            <div class="card-body">
+                                <div class="card-header">@${name}</div>
+                                <div>${item.description}</div>
+                                <div class="card-time">${new Date(item.pubDate).toLocaleString()}</div>
+                            </div>
+                        `;
+                        // 将新消息排在最前面
+                        container.insertBefore(card, container.firstChild);
+                    });
                 }
+            } catch (error) {
+                console.error(`频道 ${name} 信号受阻`);
+                const errDiv = document.createElement('div');
+                errDiv.className = 'error-msg';
+                errDiv.innerText = `⚠️ @${name} 频道同步失败`;
+                container.appendChild(errDiv);
             }
         }
 
-        // 启动程序
-        loadGesha();
+        // 批量执行
+        channels.forEach(ch => fetchChannel(ch));
     </script>
 </body>
 </html>
