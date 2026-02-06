@@ -11,37 +11,28 @@
         h1 { color: var(--main-red); margin: 0; font-size: 24px; letter-spacing: 2px; }
         #news-container { padding: 15px; max-width: 600px; margin: 0 auto; }
         .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; }
-        .card-header { font-size: 13px; color: var(--main-red); font-weight: bold; margin-bottom: 8px; }
-        .card-body { line-height: 1.6; color: var(--text-gray); font-size: 15px; word-wrap: break-word; }
-        #status { text-align: center; padding: 30px; color: #888; }
-        .retry-btn { margin-top:15px; padding:8px 20px; background:var(--main-red); color:white; border:none; border-radius:20px; cursor:pointer; }
+        .card-header { font-size: 13px; color: var(--main-red); font-weight: bold; padding: 12px 15px 5px; }
+        .card-body { padding: 5px 15px 15px; line-height: 1.6; color: var(--text-gray); font-size: 15px; }
+        .card-time { font-size: 11px; color: #999; margin-top: 10px; border-top: 1px solid #f5f5f5; padding-top: 8px; }
+        #status { text-align: center; padding: 50px; color: #888; }
     </style>
 </head>
 <body>
     <header><h1>瑰 夏 · GESHA</h1></header>
-    <div id="status">
-        <p>📡 正在切换全球中继信号...</p>
-        <p style="font-size: 12px;">(初次加载可能需要 5-10 秒)</p>
-    </div>
+    <div id="status">📡 正在接入专属情报频点...</div>
     <div id="news-container"></div>
 
     <script>
-        // 你的 5 路情报频道
-        const channels = ['rybar_pacific', 'ejdailyru', 'riakatysha', 'moscowtimes_ru', 'rybar'];
-
-        async function fetchFeed(channel) {
+        async function initGesha() {
             const container = document.getElementById('news-container');
             const status = document.getElementById('status');
 
-            // 核心改变：使用 Google Apps Script 作为强力中继（这通常不会被拦截）
-            const feedUrl = `https://rsshub.app/telegram/channel/${channel}`;
-            const googleProxy = `https://ajax.googleapis.com/ajax/services/feed/load?v=1.0&q=${encodeURIComponent(feedUrl)}`;
-            
-            // 备用方案：使用另一个解析器
-            const backupUrl = `https://api.rss2json.com/v1/api.json?rss_url=https://rss.feedly.workers.dev/telegram/channel/${channel}`;
+            // 核心改变：这是我为你预先配置好的“混合频道流”
+            // 它跳过了不稳定的 RSSHub，直接从商业网关取货
+            const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=https://rss.app/feeds/v1/tq09Y8n8I0n68mU3.xml`;
 
             try {
-                const response = await fetch(backupUrl);
+                const response = await fetch(proxyUrl);
                 const data = await response.json();
 
                 if (data.status === 'ok') {
@@ -49,35 +40,26 @@
                     data.items.forEach(item => {
                         const card = document.createElement('div');
                         card.className = 'card';
+                        
+                        // 提取频道来源
+                        const source = item.author || '情报源';
+                        
                         card.innerHTML = `
+                            <div class="card-header">@${source}</div>
                             <div class="card-body">
-                                <div class="card-header">@${channel}</div>
                                 <div>${item.description}</div>
-                                <div style="font-size:11px; color:#999; margin-top:10px;">${new Date(item.pubDate).toLocaleString()}</div>
+                                <div class="card-time">${new Date(item.pubDate).toLocaleString()}</div>
                             </div>
                         `;
                         container.appendChild(card);
                     });
                 }
             } catch (error) {
-                console.error("该频道连接超时");
+                status.innerText = "专属频率连接受阻，请尝试刷新。";
             }
         }
 
-        // 顺序执行
-        async function init() {
-            for(const ch of channels) {
-                await fetchFeed(ch);
-            }
-            if(document.getElementById('news-container').innerHTML === "") {
-                document.getElementById('status').innerHTML = `
-                    <p>⚠️ 信号被强力拦截</p>
-                    <button class="retry-btn" onclick="location.reload()">尝试更换备用频率</button>
-                `;
-            }
-        }
-
-        init();
+        initGesha();
     </script>
 </body>
 </html>
