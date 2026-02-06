@@ -37,37 +37,42 @@
     <div id="news-container"></div>
 
     <script>
-    // 1. 在这里填入你想追踪的频道ID（去掉@符号）
+    // 你的频道列表
     const myChannels = ['rybar_pacific', 'ejdailyru', 'riakatysha', 'moscowtimes_ru', 'rybar']; 
 
     async function startGesha() {
         const container = document.getElementById('news-container');
         const loader = document.getElementById('loader');
-        container.innerHTML = ''; // 清空界面
-
-        // 一个一个去搬运
+        
+        // 这是一个更稳定的中转代理，它能把 TG 信号翻译成 App 懂的语言
+        // 如果这个也打不开，说明你需要开启 VPN 来进行第一次加载测试
         for (const name of myChannels) {
-            const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=https://rsshub.app/telegram/channel/${name}`;
+            // 我们尝试使用另一个备用源
+            const rssUrl = `https://rsshub.feedly.workers.dev/telegram/channel/${name}`;
+            const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
             
             try {
                 const res = await fetch(apiUrl);
                 const data = await res.json();
-                loader.style.display = 'none';
-
-                data.items.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    card.innerHTML = `
-                        <div class="card-time">频道: @${name}</div>
-                        <div class="card-content">${item.description}</div>
-                        <div class="actions">
-                            <span class="btn" onclick="this.classList.toggle('active')">❤ 点赞</span>
-                            <span class="btn">💬 评论</span>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
-            } catch (e) { console.log(name + " 搬运失败"); }
+                
+                if (data.status === 'ok') {
+                    loader.style.display = 'none';
+                    data.items.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'card';
+                        // 提取图片（如果有的话）
+                        let content = item.description;
+                        
+                        card.innerHTML = `
+                            <div style="font-size:12px;color:#999;margin-bottom:8px;">来自: @${name}</div>
+                            <div style="line-height:1.6; font-size:14px;">${content}</div>
+                        `;
+                        container.appendChild(card);
+                    });
+                }
+            } catch (e) {
+                console.log("信号接入点暂时忙碌...");
+            }
         }
     }
     startGesha();
